@@ -1,25 +1,29 @@
 package aggregate
 
-import "github.com/0xivanov/blockchain-data-aggregator/data_pipeline/extraction"
+import (
+	"fmt"
 
-// The aggregated data for a single day and project
-type MarketplaceData struct {
-	Date            string
-	ProjectID       string
-	NumTransactions uint64
-	TotalVolumeUSD  float64
-}
+	"github.com/0xivanov/blockchain-data-aggregator/models"
+)
 
 // AggregateTransactions aggregates the given transactions by day and project ID
-func AggregateTransactions(transactions []extraction.Transaction, priceMap map[string]float64) []MarketplaceData {
+func AggregateTransactions(transactions []models.Transaction, priceMap map[string]float64) ([]models.MarketplaceData, error) {
+	if len(transactions) == 0 {
+		return nil, fmt.Errorf("no transactions to aggregate")
+	}
 	// Hash map to group transactions by day and project ID
-	aggregated := make(map[string]MarketplaceData)
+	aggregated := make(map[string]models.MarketplaceData)
 
 	for _, txn := range transactions {
 		day := txn.Date.Format("2006-01-02")
 		key := day + "-" + txn.ProjectID
 
-		transactionVolume := priceMap[txn.CurrencySymbol] * txn.CurrencyValueDecimal
+		price := priceMap[txn.CurrencySymbol]
+		if price == 0 {
+			return nil, fmt.Errorf("no price found for %s", txn.CurrencySymbol)
+		}
+
+		transactionVolume := price * txn.CurrencyValueDecimal
 
 		agg := aggregated[key]
 		agg.Date = day
@@ -31,10 +35,10 @@ func AggregateTransactions(transactions []extraction.Transaction, priceMap map[s
 	}
 
 	// Convert map to slice
-	var result []MarketplaceData
+	var result []models.MarketplaceData
 	for _, v := range aggregated {
 		result = append(result, v)
 	}
 
-	return result
+	return result, nil
 }

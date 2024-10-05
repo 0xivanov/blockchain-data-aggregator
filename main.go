@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
+	"cloud.google.com/go/storage"
 	"github.com/0xivanov/blockchain-data-aggregator/config"
 	"github.com/0xivanov/blockchain-data-aggregator/data_pipeline/aggregate"
 	coingecko "github.com/0xivanov/blockchain-data-aggregator/data_pipeline/coin_gecko"
 	"github.com/0xivanov/blockchain-data-aggregator/data_pipeline/db"
 	"github.com/0xivanov/blockchain-data-aggregator/data_pipeline/extraction"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
 )
 
 func main() {
@@ -33,8 +37,22 @@ func main() {
 		log.Fatalf("Failed to read service account key file: %v", err)
 	}
 
+	ctx := context.Background()
+
+	// Initialize the GCP extractor
+	gcpConf, err := google.CredentialsFromJSON(ctx, credentials, storage.ScopeReadOnly)
+	if err != nil {
+		log.Fatalf("Failed to create credentials from JSON: %v", err)
+	}
+	client, err := storage.NewClient(ctx, option.WithCredentials(gcpConf))
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+	gcpExtractor := extraction.NewGCPExtractor(client)
+
 	// Download the transactions from GCS
-	transactions, err := extraction.ExtractTransactionsFromGCS(credentials, config.BucketName, config.ObjectName)
+	transactions, err := gcpExtractor.ExtractTransactionsFromGCS(config.BucketName, config.ObjectName, ctx)
 	if err != nil {
 		log.Fatalf("Failed to fetch data from GCS: %v", err)
 	}
@@ -48,7 +66,10 @@ func main() {
 	log.Println("Prices successfully fetched from CoinGecko")
 
 	// Aggregate the transactions
-	marketplaceData := aggregate.AggregateTransactions(transactions, priceMap)
+	marketplaceData, err := aggregate.AggregateTransactions(transactions, priceMap)
+	if err != nil {
+		log.Fatalf("Failed to aggregate transactions: %v", err)
+	}
 
 	// Save the aggregated data into ClickHouse
 	if err := db.SaveMarketplaceData(marketplaceData); err != nil {

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/0xivanov/blockchain-data-aggregator/data_pipeline/aggregate"
+	"github.com/0xivanov/blockchain-data-aggregator/models"
 	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
@@ -34,7 +34,7 @@ func NewClickHouseDB(dsn, dbName string) (*ClickHouseDB, error) {
 }
 
 // SaveMarketplaceData saves the given marketplace data to the ClickHouse database
-func (clickHouse *ClickHouseDB) SaveMarketplaceData(data []aggregate.MarketplaceData) error {
+func (clickHouse *ClickHouseDB) SaveMarketplaceData(data []models.MarketplaceData) error {
 
 	// build the insert query
 	var values string

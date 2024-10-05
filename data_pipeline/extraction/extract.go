@@ -10,32 +10,25 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/option"
+	"github.com/0xivanov/blockchain-data-aggregator/models"
 )
 
-type Transaction struct {
-	Date                 time.Time
-	ProjectID            string
-	CurrencySymbol       string
-	CurrencyValueDecimal float64
+var (
+	currencySymbolRegex       = regexp.MustCompile(`"currencySymbol":"([^"]+)"`)
+	currencyValueDecimalRegex = regexp.MustCompile(`"currencyValueDecimal":"([^"]+)"`)
+)
+
+type GCPExtractor struct {
+	client *storage.Client
 }
 
-func ExtractTransactionsFromGCS(credentials []byte, bucketName, objectName string) ([]Transaction, error) {
-	ctx := context.Background()
+// NewGCPExtractor creates a new GCPExtractor.
+func NewGCPExtractor(client *storage.Client) *GCPExtractor {
+	return &GCPExtractor{client}
+}
 
-	config, err := google.CredentialsFromJSON(ctx, credentials, storage.ScopeReadOnly)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create credentials from JSON: %v", err)
-	}
-
-	client, err := storage.NewClient(ctx, option.WithCredentials(config))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %v", err)
-	}
-	defer client.Close()
-
-	reader, err := client.Bucket(bucketName).Object(objectName).NewReader(ctx)
+func (gcpExtractor *GCPExtractor) ExtractTransactionsFromGCS(bucketName, objectName string, ctx context.Context) ([]models.Transaction, error) {
+	reader, err := gcpExtractor.client.Bucket(bucketName).Object(objectName).NewReader(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +40,8 @@ func ExtractTransactionsFromGCS(credentials []byte, bucketName, objectName strin
 	return extractTransactions(csvReader)
 }
 
-func extractTransactions(csvReader *csv.Reader) ([]Transaction, error) {
-	var transactions []Transaction
+func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
+	var transactions []models.Transaction
 
 	headers, err := csvReader.Read()
 	if err != nil {
@@ -65,6 +58,8 @@ func extractTransactions(csvReader *csv.Reader) ([]Transaction, error) {
 			propsIndex = i
 		} else if header == "nums" {
 			numsIndex = i
+		} else {
+			return nil, fmt.Errorf("unknown header: %s", header)
 		}
 	}
 
@@ -99,7 +94,7 @@ func extractTransactions(csvReader *csv.Reader) ([]Transaction, error) {
 			return nil, fmt.Errorf("failed to parse timestamp: %v", err)
 		}
 
-		transactions = append(transactions, Transaction{
+		transactions = append(transactions, models.Transaction{
 			Date:                 parsedTime,
 			ProjectID:            projectID,
 			CurrencySymbol:       currencySymbol,
@@ -107,10 +102,11 @@ func extractTransactions(csvReader *csv.Reader) ([]Transaction, error) {
 		})
 	}
 
+	if len(transactions) == 0 {
+		return nil, fmt.Errorf("no transactions found in CSV")
+	}
 	return transactions, nil
 }
-
-var currencySymbolRegex = regexp.MustCompile(`"currencySymbol":"([^"]+)"`)
 
 func extractCurrencySymbol(propsString string) (string, error) {
 	matches := currencySymbolRegex.FindStringSubmatch(propsString)
@@ -122,8 +118,6 @@ func extractCurrencySymbol(propsString string) (string, error) {
 		return "", fmt.Errorf("currencySymbol not found in props")
 	}
 }
-
-var currencyValueDecimalRegex = regexp.MustCompile(`"currencyValueDecimal":"([^"]+)"`)
 
 func extractCurrencyValueDecimal(numsString string) (float64, error) {
 	matches := currencyValueDecimalRegex.FindStringSubmatch(numsString)
