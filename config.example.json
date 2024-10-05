@@ -1,0 +1,7 @@
+{
+  "clickhouseDSN": "clickhouse://username:password@localhost:18123/database?dial_timeout=200ms&max_execution_time=60",
+  "bucketKeyPath": "abc.json",
+  "bucketName": "abc",
+  "objectName": "abc.csv",
+  "coinGeckoApiKey": "abc"
+}

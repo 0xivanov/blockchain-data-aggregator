@@ -1,0 +1,4 @@
+config.json
+/vscode
+*.json
+!config.example.json

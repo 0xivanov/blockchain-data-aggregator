@@ -1,0 +1,37 @@
+version: '3'
+
+tasks:
+  init-db:
+    desc: "Start ClickHouse and create the marketplace_data table"
+    cmds:
+      - |
+        # Start ClickHouse container in detached mode
+        docker run -d -p 18123:8123 -p19000:9000 --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+
+        # Wait for ClickHouse to start up
+        sleep 5
+
+        # Create database 
+        docker exec -i some-clickhouse-server clickhouse-client --query="
+        CREATE DATABASE IF NOT EXISTS blockchainAggregator;"
+
+        # Create table 
+        docker exec -i some-clickhouse-server clickhouse-client --query="
+        CREATE TABLE IF NOT EXISTS blockchainAggregator.marketplace_data (
+          date Date,
+          project_id String,
+          num_transactions Int32,
+          total_volume_usd Float32
+        ) ENGINE = MergeTree()
+        PARTITION BY toYYYYMM(date)
+        ORDER BY (date, project_id);"
+
+  shutdown-db:
+    desc: "Stop and remove the ClickHouse container"
+    cmds:
+      - |
+        # Stop the ClickHouse container
+        docker stop some-clickhouse-server || echo "Container not running."
+
+        # Remove the ClickHouse container
+        docker rm some-clickhouse-server || echo "Container does not exist."
