@@ -1,6 +1,7 @@
 package coingecko
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -41,7 +42,7 @@ func NewCoinGeckoClient(apiKey, tokenApiListPath string) *CoinGeckoClient {
 }
 
 // GetPriceMap returns a map of currency symbols to their respective prices in USD at the given date
-func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transaction) (map[string]float64, error) {
+func (geckoClient *CoinGeckoClient) GetPriceMap(ctx context.Context, transactions []models.Transaction) (map[string]float64, error) {
 	// get the token IDs for the given currency symbols
 	symbolToIdMap, err := geckoClient.getTokenIdsFunc(geckoClient.tokenApiListPath)
 	if err != nil {
@@ -61,7 +62,7 @@ func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transactio
 		// and convert the symbol to lowercase to match the map keys
 		symbol := symbolToIdMap[strings.ToLower(txn.CurrencySymbol)]
 		// fetch the historical prices via the CoinGecko API
-		price, err := geckoClient.getPriceInUsd(symbol, txn.Date)
+		price, err := geckoClient.getPriceInUsd(ctx, symbol, txn.Date)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get price for %s: %v", txn.CurrencySymbol, err)
 		}
@@ -71,14 +72,20 @@ func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transactio
 	return prices, nil
 }
 
-func (geckoClient *CoinGeckoClient) getPriceInUsd(symbol string, date time.Time) (float64, error) {
+func (geckoClient *CoinGeckoClient) getPriceInUsd(ctx context.Context, symbol string, date time.Time) (float64, error) {
 	parsedDate := date.Format(geckoDateFormat)
 
 	url := fmt.Sprintf("%s/coins/%s/history?date=%s?localization=false", geckoClient.baseUrl, symbol, parsedDate)
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil) // Create a new request with context
 	if err != nil {
 		return 0, err
 	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("request failed with status: %v", resp.Status)
 	}

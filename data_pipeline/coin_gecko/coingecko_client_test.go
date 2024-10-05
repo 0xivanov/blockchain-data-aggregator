@@ -1,6 +1,7 @@
 package coingecko
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -56,7 +57,7 @@ func TestCoinGeckoClient_GetPriceMap(t *testing.T) {
 		},
 	}
 
-	priceMap, err := geckoClient.GetPriceMap(transactions)
+	priceMap, err := geckoClient.GetPriceMap(context.TODO(), transactions)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 2000.5, priceMap["ETH"])
@@ -91,7 +92,7 @@ func TestCoinGeckoClient_GetPriceMap_ReusePrice(t *testing.T) {
 		},
 	}
 
-	priceMap, err := geckoClient.GetPriceMap(transactions)
+	priceMap, err := geckoClient.GetPriceMap(context.TODO(), transactions)
 	assert.NoError(t, err)
 	assert.Equal(t, 2000.5, priceMap["ETH"])
 }
@@ -112,7 +113,7 @@ func TestCoinGeckoClient_GetPriceInUsd(t *testing.T) {
 	}
 
 	date := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	price, err := geckoClient.getPriceInUsd("ethereum", date)
+	price, err := geckoClient.getPriceInUsd(context.TODO(), "ethereum", date)
 	assert.NoError(t, err)
 	assert.Equal(t, 1500.75, price)
 }
@@ -133,7 +134,7 @@ func TestCoinGeckoClient_GetPriceInUsd_MalformedResponse(t *testing.T) {
 	}
 
 	date := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err := geckoClient.getPriceInUsd("ethereum", date)
+	_, err := geckoClient.getPriceInUsd(context.TODO(), "ethereum", date)
 	assert.Error(t, err)
 }
 
@@ -146,7 +147,7 @@ func TestCoinGeckoClient_GetPriceInUsd_EmptyResp(t *testing.T) {
 	}
 
 	date := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err := geckoClient.getPriceInUsd("ethereum", date)
+	_, err := geckoClient.getPriceInUsd(context.TODO(), "ethereum", date)
 	assert.Error(t, err)
 }
 
@@ -159,6 +160,6 @@ func TestCoinGeckoClient_GetPriceInUsd_ApiError(t *testing.T) {
 	}
 
 	date := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err := geckoClient.getPriceInUsd("ethereum", date)
+	_, err := geckoClient.getPriceInUsd(context.TODO(), "ethereum", date)
 	assert.ErrorContains(t, err, "request failed with status")
 }

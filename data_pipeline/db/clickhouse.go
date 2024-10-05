@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -30,12 +31,14 @@ func NewClickHouseDB(dsn, dbName string) (*ClickHouseDB, error) {
 		return nil, fmt.Errorf("failed to ping ClickHouse: %v", err)
 	}
 
-	return &ClickHouseDB{dsn: dsn, conn: conn}, nil
+	return &ClickHouseDB{
+		dsn:  dsn,
+		conn: conn,
+	}, nil
 }
 
 // SaveMarketplaceData saves the given marketplace data to the ClickHouse database
-func (clickHouse *ClickHouseDB) SaveMarketplaceData(data []models.MarketplaceData) error {
-
+func (clickHouse *ClickHouseDB) SaveMarketplaceData(ctx context.Context, data []models.MarketplaceData) error {
 	// build the insert query
 	var values string
 	for _, d := range data {
@@ -43,7 +46,7 @@ func (clickHouse *ClickHouseDB) SaveMarketplaceData(data []models.MarketplaceDat
 	}
 
 	query := "INSERT INTO marketplace_data (date, project_id, num_transactions, total_volume_usd) VALUES " + values
-	_, err := clickHouse.conn.Exec(query)
+	_, err := clickHouse.conn.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to execute insert statement: %v", err)
 	}

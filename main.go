@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/0xivanov/blockchain-data-aggregator/config"
@@ -22,6 +23,10 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
+	// Create the context with a timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	// Initialize the ClickHouse database
 	db, err := db.NewClickHouseDB(config.ClickhouseDSN, config.DbName)
 	if err != nil {
@@ -38,7 +43,6 @@ func main() {
 	}
 
 	// Initialize the GCP extractor
-	ctx := context.Background()
 	gcpConf, err := google.CredentialsFromJSON(ctx, credentials, storage.ScopeReadOnly)
 	if err != nil {
 		log.Fatalf("Failed to create credentials from JSON: %v", err)
@@ -58,7 +62,7 @@ func main() {
 	log.Println("Data successfully extracted from GCS")
 
 	// Get the prices from CoinGecko
-	priceMap, err := geckoClient.GetPriceMap(transactions)
+	priceMap, err := geckoClient.GetPriceMap(ctx, transactions)
 	if err != nil {
 		log.Fatalf("Failed to get price map: %v", err)
 	}
@@ -71,7 +75,7 @@ func main() {
 	}
 
 	// Save the aggregated data into ClickHouse
-	if err := db.SaveMarketplaceData(marketplaceData); err != nil {
+	if err := db.SaveMarketplaceData(ctx, marketplaceData); err != nil {
 		log.Fatalf("Failed to save data into ClickHouse: %v", err)
 	}
 	log.Println("Data successfully inserted into ClickHouse")
