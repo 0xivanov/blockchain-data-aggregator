@@ -12,14 +12,14 @@ import (
 
 // Mock for getCoinGeckoTokenIds
 func mockGetCoinGeckoTokenIds(tokenApiListPath string) (map[string]string, error) {
-	// Returns a mock mapping of currency symbols to their CoinGecko token IDs
+	// returns a mock mapping of currency symbols to their CoinGecko token IDs
 	return map[string]string{
 		"eth": "ethereum",
 		"btc": "bitcoin",
 	}, nil
 }
 
-// Mock HTTP server for testing
+// mock HTTP server for testing
 func setupMockServer(response string, statusCode int) *httptest.Server {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)

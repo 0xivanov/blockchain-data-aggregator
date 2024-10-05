@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// Config holds the configuration for the application
 type Config struct {
 	ClickhouseDSN string `json:"clickhouseDSN"`
 	DbName        string `json:"dbName"`

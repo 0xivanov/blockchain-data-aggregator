@@ -21,6 +21,7 @@ func getCoinGeckoTokenIds(filePathtokenApiListPath string) (map[string]string, e
 
 	symbolToIdMap := make(map[string]string)
 	for _, record := range records {
+		// record[0] is the token ID, record[1] is the currency symbol
 		symbolToIdMap[record[1]] = record[0]
 	}
 

@@ -25,7 +25,7 @@ func NewClickHouseDB(dsn, dbName string) (*ClickHouseDB, error) {
 		Protocol: clickhouse.HTTP,
 	})
 
-	// Ensure the connection is working - fail fast
+	// ensure the connection is working - fail fast
 	if err := conn.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping ClickHouse: %v", err)
 	}

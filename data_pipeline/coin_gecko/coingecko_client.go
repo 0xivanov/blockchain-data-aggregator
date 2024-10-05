@@ -10,7 +10,9 @@ import (
 	"github.com/0xivanov/blockchain-data-aggregator/models"
 )
 
-// Structs to hold the response from the CoinGecko API
+var geckoDateFormat = "02-01-2006"
+
+// Structs to unmarshal the response from the CoinGecko API into
 type CoinGeckoResponse struct {
 	MarketData MarketData `json:"market_data"`
 }
@@ -20,10 +22,12 @@ type MarketData struct {
 
 // CoinGeckoClient handles the communication with the CoinGecko API
 type CoinGeckoClient struct {
-	apiKey           string
-	baseUrl          string
+	apiKey  string
+	baseUrl string
+	// this is the path to the file containing the official list of token IDs for the CoinGecko API
 	tokenApiListPath string
-	getTokenIdsFunc  func(filePathtokenApiListPath string) (map[string]string, error) // Injected function for testing
+	// injected function for testing purposes
+	getTokenIdsFunc func(filePathtokenApiListPath string) (map[string]string, error)
 }
 
 func NewCoinGeckoClient(apiKey, tokenApiListPath string) *CoinGeckoClient {
@@ -38,7 +42,7 @@ func NewCoinGeckoClient(apiKey, tokenApiListPath string) *CoinGeckoClient {
 
 // GetPriceMap returns a map of currency symbols to their respective prices in USD at the given date
 func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transaction) (map[string]float64, error) {
-	// Get the token IDs for the given currency symbols
+	// get the token IDs for the given currency symbols
 	symbolToIdMap, err := geckoClient.getTokenIdsFunc(geckoClient.tokenApiListPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token IDs: %v", err)
@@ -48,13 +52,16 @@ func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transactio
 	prices := make(map[string]float64)
 	for _, txn := range transactions {
 
-		// Skip if the price is already fetched
+		// skip if the price is already fetched
 		if prices[txn.CurrencySymbol] != 0 {
 			continue
 		}
 
+		// get the token ID for the currency symbol since the CoinGecko API uses token IDs
+		// and convert the symbol to lowercase to match the map keys
+		symbol := symbolToIdMap[strings.ToLower(txn.CurrencySymbol)]
 		// fetch the historical prices via the CoinGecko API
-		price, err := geckoClient.getPriceInUsd(symbolToIdMap[strings.ToLower(txn.CurrencySymbol)], txn.Date)
+		price, err := geckoClient.getPriceInUsd(symbol, txn.Date)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get price for %s: %v", txn.CurrencySymbol, err)
 		}
@@ -63,8 +70,6 @@ func (geckoClient *CoinGeckoClient) GetPriceMap(transactions []models.Transactio
 
 	return prices, nil
 }
-
-var geckoDateFormat = "02-01-2006"
 
 func (geckoClient *CoinGeckoClient) getPriceInUsd(symbol string, date time.Time) (float64, error) {
 	parsedDate := date.Format(geckoDateFormat)

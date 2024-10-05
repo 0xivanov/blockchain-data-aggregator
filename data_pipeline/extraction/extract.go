@@ -27,6 +27,7 @@ func NewGCPExtractor(client *storage.Client) *GCPExtractor {
 	return &GCPExtractor{client}
 }
 
+// ExtractTransactionsFromGCS extracts transactions from a CSV file stored in GCS.
 func (gcpExtractor *GCPExtractor) ExtractTransactionsFromGCS(bucketName, objectName string, ctx context.Context) ([]models.Transaction, error) {
 	reader, err := gcpExtractor.client.Bucket(bucketName).Object(objectName).NewReader(ctx)
 	if err != nil {
@@ -40,6 +41,7 @@ func (gcpExtractor *GCPExtractor) ExtractTransactionsFromGCS(bucketName, objectN
 	return extractTransactions(csvReader)
 }
 
+// Helper function to extract transactions from a CSV file
 func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
 	var transactions []models.Transaction
 
@@ -58,8 +60,6 @@ func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
 			propsIndex = i
 		} else if header == "nums" {
 			numsIndex = i
-		} else {
-			return nil, fmt.Errorf("unknown header: %s", header)
 		}
 	}
 
@@ -78,7 +78,7 @@ func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
 		props := record[propsIndex]         // "props"
 		nums := record[numsIndex]           // "nums"
 
-		// Extract currencySymbol and currencyValueDecimal from props and nums fields
+		// extract currencySymbol and currencyValueDecimal from props and nums fields
 		currencySymbol, err := extractCurrencySymbol(props)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get currency symbol: %v", err)
@@ -88,7 +88,7 @@ func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
 			return nil, fmt.Errorf("failed to get currency value symbol: %v", err)
 		}
 
-		// Parse the timestamp into a time.Time object
+		// parse the timestamp into a time.Time object
 		parsedTime, err := time.Parse(time.DateTime, dateStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse timestamp: %v", err)
@@ -108,10 +108,11 @@ func extractTransactions(csvReader *csv.Reader) ([]models.Transaction, error) {
 	return transactions, nil
 }
 
+// Extract currencySymbol from the props field via regex
 func extractCurrencySymbol(propsString string) (string, error) {
 	matches := currencySymbolRegex.FindStringSubmatch(propsString)
 
-	// Check if a match was found
+	// check if a match was found
 	if len(matches) > 1 {
 		return matches[1], nil
 	} else {
@@ -119,12 +120,13 @@ func extractCurrencySymbol(propsString string) (string, error) {
 	}
 }
 
+// Extract currencyValueDecimal from the nums field via regex
 func extractCurrencyValueDecimal(numsString string) (float64, error) {
 	matches := currencyValueDecimalRegex.FindStringSubmatch(numsString)
 
-	// Check if a match was found
+	// check if a match was found
 	if len(matches) > 1 {
-		// Convert the value to a float64
+		// convert the value to a float64
 		currencyValueDecimal, err := strconv.ParseFloat(matches[1], 64)
 		if err != nil {
 			return 0, fmt.Errorf("failed to parse currency value: %v", err)

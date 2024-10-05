@@ -37,9 +37,8 @@ func main() {
 		log.Fatalf("Failed to read service account key file: %v", err)
 	}
 
-	ctx := context.Background()
-
 	// Initialize the GCP extractor
+	ctx := context.Background()
 	gcpConf, err := google.CredentialsFromJSON(ctx, credentials, storage.ScopeReadOnly)
 	if err != nil {
 		log.Fatalf("Failed to create credentials from JSON: %v", err)

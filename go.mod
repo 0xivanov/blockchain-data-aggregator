@@ -5,7 +5,6 @@ go 1.20
 require (
 	cloud.google.com/go/storage v1.32.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.19.0
-	github.com/golang/mock v1.6.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/oauth2 v0.10.0
 	google.golang.org/api v0.132.0

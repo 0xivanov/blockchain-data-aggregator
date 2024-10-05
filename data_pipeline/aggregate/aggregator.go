@@ -11,7 +11,7 @@ func AggregateTransactions(transactions []models.Transaction, priceMap map[strin
 	if len(transactions) == 0 {
 		return nil, fmt.Errorf("no transactions to aggregate")
 	}
-	// Hash map to group transactions by day and project ID
+	// hash map to group transactions by day and project ID
 	aggregated := make(map[string]models.MarketplaceData)
 
 	for _, txn := range transactions {
@@ -34,7 +34,7 @@ func AggregateTransactions(transactions []models.Transaction, priceMap map[strin
 		aggregated[key] = agg
 	}
 
-	// Convert map to slice
+	// convert map to slice
 	var result []models.MarketplaceData
 	for _, v := range aggregated {
 		result = append(result, v)
