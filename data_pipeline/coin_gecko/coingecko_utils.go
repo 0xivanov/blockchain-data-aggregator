@@ -14,6 +14,11 @@ func getCoinGeckoTokenIds(filePathtokenApiListPath string) (map[string]string, e
 	defer f.Close()
 
 	csvReader := csv.NewReader(f)
+	// skip the header
+	_, err = csvReader.Read()
+	if err != nil {
+		return nil, err
+	}
 	records, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err

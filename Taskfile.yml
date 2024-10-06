@@ -11,20 +11,11 @@ tasks:
         # Wait for ClickHouse to start up
         sleep 5
 
-        # Create database 
-        docker exec -i some-clickhouse-server clickhouse-client --query="
-        CREATE DATABASE IF NOT EXISTS blockchainAggregator;"
+        # Run init_db.sql to initialize the database
+        docker exec -i some-clickhouse-server clickhouse-client --multiquery < sql/init_db.sql
 
-        # Create table 
-        docker exec -i some-clickhouse-server clickhouse-client --query="
-        CREATE TABLE IF NOT EXISTS blockchainAggregator.marketplace_data (
-          date Date,
-          project_id String,
-          num_transactions Int32,
-          total_volume_usd Float32
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(date)
-        ORDER BY (date, project_id);"
+        # Run marketplace_schema.sql to create the marketplace_data table
+        docker exec -i some-clickhouse-server clickhouse-client --multiquery < sql/marketplace_schema.sql
 
   shutdown-db:
     desc: "Stop and remove the ClickHouse container"

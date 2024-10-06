@@ -70,7 +70,12 @@ go run main.go
 
 Make sure to provide the necessary fields in `config.json` file.
 
-### 2. Testing
+### 2. Viewing the aggregated data
+
+You can use 3rd party UI tool to view the aggregated data in Clickhouse.
+See the available options [Here](https://clickhouse.com/docs/en/interfaces/third-party/gui)
+
+### 3. Testing
 
 The project uses `go test` for unit tests. Each component has its own tests.
 
