@@ -77,10 +77,15 @@ See the available options [Here](https://clickhouse.com/docs/en/interfaces/third
 
 ### 3. Testing
 
-The project uses `go test` for unit tests. Each component has its own tests.
+The project uses `go test` for unit tests. Each component has its own unit tests.
 
 Run all tests with:
 
 ```bash
 go test ./...
 ```
+
+## Notes
+
+Concurrent api calls are implemented in a separate branch, 
+because the CoinGecko API does not allow many simultaneous requests per API key, returning status `429 Too Many Requests`.
