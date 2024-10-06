@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/0xivanov/blockchain-data-aggregator/models"
@@ -51,22 +52,59 @@ func (geckoClient *CoinGeckoClient) GetPriceMap(ctx context.Context, transaction
 
 	// prices holds symbol -> price mappings
 	prices := make(map[string]float64)
-	for _, txn := range transactions {
 
-		// skip if the price is already fetched
+	// chan to collect the results from the goroutines fetching the prices
+	resultsChan := make(chan struct {
+		symbol string
+		price  float64
+		err    error
+	}, len(transactions))
+
+	var wg sync.WaitGroup
+
+	for _, txn := range transactions {
+		// skip if price is already fetched
 		if prices[txn.CurrencySymbol] != 0 {
 			continue
 		}
 
-		// get the token ID for the currency symbol since the CoinGecko API uses token IDs
-		// and convert the symbol to lowercase to match the map keys
-		symbol := symbolToIdMap[strings.ToLower(txn.CurrencySymbol)]
-		// fetch the historical prices via the CoinGecko API
-		price, err := geckoClient.getPriceInUsd(ctx, symbol, txn.Date)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get price for %s: %v", txn.CurrencySymbol, err)
+		// get the token ID and lowercase the symbol
+		symbol := strings.ToLower(txn.CurrencySymbol)
+		tokenId := symbolToIdMap[symbol]
+
+		wg.Add(1)
+		// spawn a goroutine to concurrently call the CoinGecko API
+		go func(symbol string, tokenId string, txnDate time.Time) {
+			defer wg.Done()
+
+			// fetch price from CoinGecko in the background
+			price, err := geckoClient.getPriceInUsd(ctx, tokenId, txnDate)
+
+			// send the result back through the channel
+			resultsChan <- struct {
+				symbol string
+				price  float64
+				err    error
+			}{
+				symbol: symbol,
+				price:  price,
+				err:    err,
+			}
+		}(symbol, tokenId, txn.Date)
+	}
+
+	// wait for all goroutines to finish
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// collect results from the channel
+	for result := range resultsChan {
+		if result.err != nil {
+			return nil, fmt.Errorf("failed to get price for %s: %v", result.symbol, result.err)
 		}
-		prices[txn.CurrencySymbol] = price
+		prices[result.symbol] = result.price
 	}
 
 	return prices, nil
